@@ -1,0 +1,3 @@
+[submodule "src/main/resources/private-for-commu"]
+	path = src/main/resources/private-for-commu
+	url = https://github.com/pia2011/private-for-commu.git
