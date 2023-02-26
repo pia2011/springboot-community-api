@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.0.2'
 	id 'io.spring.dependency-management' version '1.1.0'
+	id "org.asciidoctor.jvm.convert" version "3.3.2"  // (1) gradle 7 이상부터 JVM
 }
 
 group = 'com.kgs'
@@ -9,6 +10,7 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '17'
 
 configurations {
+	asciidoctorExtensions // (2) (3)에서 dependencies에 적용한 asciidoctor를 구성에 추가
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
@@ -18,9 +20,6 @@ repositories {
 	mavenCentral()
 }
 
-ext {
-	set('snippetsDir', file("build/generated-snippets"))
-}
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -36,9 +35,34 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 	testImplementation 'org.springframework.security:spring-security-test'
+
+	asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor' // (3) 스니펫 조각들 연동할 수 있는 의존성
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc' // (4) mockMvc 사용(@WebMvcTest 활용, Controller Layer 단위 테스트)
 }
 
-tasks.named('test') {
-	outputs.dir snippetsDir
+ext {
+	snippetsDir = file('build/generated-snippets') // 변수 선언
+}
+
+test {
+	outputs.dir snippetsDir // snippetsDir 를 출력으로 구성
 	useJUnitPlatform()
+}
+
+asciidoctor { // 작업 구성 설정 - 알아서..
+	dependsOn test // test 작업 이후에 동작
+	configurations 'asciidoctorExtensions'
+	inputs.dir snippetsDir // snippetsDir 를 입력으로 구성
+
+}
+
+task copyDocument(type: Copy) { // asciidoctor 작업 : copy
+	dependsOn asciidoctor // asciidoctor 작업 이후에 동작
+
+	from file("build/docs/asciidoc")
+	into file("src/main/resources/static/docs")
+}
+
+build { // copyDocument 작업 이후 build
+	dependsOn copyDocument
 }
